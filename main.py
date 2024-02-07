@@ -1,11 +1,13 @@
-import pygame
+from tkinter import *
 from enum import Enum
 
+from board import Board
+
 NB_SQUARES_SIDE = 8
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-BLUE = (0, 0, 255)
-RED = (255, 0, 0)
+WHITE = "white"
+BLACK = "black"
+BLUE = "blue"
+RED = "red"
 PIECE_TO_SQUARE_MARGIN = 5
 
 PLAYER_1_COLOR = RED
@@ -14,195 +16,132 @@ PLAYER_2_COLOR = BLUE
 
 Direction = Enum('Direction', ['UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT'])
 
-pygame.init()
+board_back = Board(NB_SQUARES_SIDE, PLAYER_1_COLOR, PLAYER_2_COLOR)
+board = [[None for _ in range(board_back.size)] for _ in range(board_back.size)]
 
-# Get the current screen size
-infoObject = pygame.display.Info()
-screen_width = infoObject.current_w - 100
-screen_height = infoObject.current_h - 100
-
-# Set the screen size to have a square aspect ratio
-min_screen_size = min(screen_width, screen_height)
-screen_width = min_screen_size
-screen_height = min_screen_size
-
-# Set the screen size
-screen = pygame.display.set_mode((screen_width, screen_height))
-clock = pygame.time.Clock()
-running = True
-
-square_size = screen_width // NB_SQUARES_SIDE
-
-def absolute_pos_to_square_pos(pos):
-    return (int(pos[1] // square_size), int(pos[0] // square_size))
-
-def square_pos_to_absolute_pos(pos):
-    return (pos[1] * square_size, pos[0] * square_size)
-
-def get_square_from_pos(pos):
-    return (int(pos[1] // square_size), int(pos[0] // square_size))
-
-def get_square_color_from_pos(pos):
-    square_pos = get_square_from_pos(pos)
-    color = screen.get_at((int(square_pos[1] * square_size), int(square_pos[0] * square_size)))[:3] 
-    return color
-
-def get_player_from_pos(pos):
-    color = screen.get_at((pos[0], pos[1]))[:3]
-    if color == PLAYER_1_COLOR:
-        return 1
-    elif color == PLAYER_2_COLOR:
-        return 2
-    else:
-        return 0
-
-def get_player_color(player):
-    if player == 1:
-        return PLAYER_1_COLOR
-    elif player == 2:
-        return PLAYER_2_COLOR
-    else:
-        return None
-
-def move_piece(pos, new_pos):
-    start_square_color = get_square_color_from_pos(pos)
-    start_square_pos = get_square_from_pos(pos)
-
-    player = get_player_from_pos(pos)
-    player_color = get_player_color(player)
-    
-    end_square_pos = get_square_from_pos(new_pos)
-
-    pygame.draw.rect(screen, start_square_color, (start_square_pos[1] * square_size, start_square_pos[0] * square_size, square_size, square_size))
-    pygame.draw.circle(screen, player_color, (end_square_pos[1] * square_size + square_size // 2, end_square_pos[0] * square_size + square_size // 2), square_size // 2 - PIECE_TO_SQUARE_MARGIN)
-
-def pos_in_board(pos):
-    return pos[0] >= 0 and pos[0] < NB_SQUARES_SIDE and pos[1] >= 0 and pos[1] < NB_SQUARES_SIDE
-
-def is_diagonal_move(start_square_pos, end_square_pos):
-    return abs(end_square_pos[0] - start_square_pos[0]) == abs(end_square_pos[1] - start_square_pos[1])
-
-def is_empty_square(pos):
-    return get_player_from_pos(pos) == 0
-
-def move_length(start_square_pos, end_square_pos):
-    return abs(end_square_pos[0] - start_square_pos[0])
-
-def is_valid_move_on_empty_square(new_pos, start_square_color, start_square_pos, end_square_pos):
-    return (
-            pos_in_board(end_square_pos) 
-        and is_diagonal_move(start_square_pos, end_square_pos) 
-        and start_square_color != BLACK 
-        and is_empty_square(new_pos) 
-        and move_length(start_square_pos, end_square_pos) == 1
-    )
-
-def get_move_direction(start_square_pos, end_square_pos):
-    if end_square_pos[0] < start_square_pos[0] and end_square_pos[1] < start_square_pos[1]:
-        return Direction.UP_LEFT
-    elif end_square_pos[0] < start_square_pos[0] and end_square_pos[1] > start_square_pos[1]:
-        return Direction.UP_RIGHT
-    elif end_square_pos[0] > start_square_pos[0] and end_square_pos[1] < start_square_pos[1]:
-        return Direction.DOWN_LEFT
-    elif end_square_pos[0] > start_square_pos[0] and end_square_pos[1] > start_square_pos[1]:
-        return Direction.DOWN_RIGHT
-
-def oposite_player_on_path(start_square_pos, end_square_pos):
-    absolute_start_pos = square_pos_to_absolute_pos(start_square_pos)
-    move_direction = get_move_direction(start_square_pos, end_square_pos)
-
-    if move_direction == Direction.UP_LEFT:
-        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] - square_size, absolute_start_pos[1] - square_size))
-    elif move_direction == Direction.UP_RIGHT:
-        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] - square_size, absolute_start_pos[1] + square_size))
-    elif move_direction == Direction.DOWN_LEFT:
-        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] + square_size, absolute_start_pos[1] - square_size))
-    elif move_direction == Direction.DOWN_RIGHT:
-        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] + square_size, absolute_start_pos[1] + square_size))
-    
-def is_valid_jump_move(new_pos, start_square_color, start_square_pos, end_square_pos):
-    return (
-            pos_in_board(end_square_pos) 
-        and is_diagonal_move(start_square_pos, end_square_pos) 
-        and start_square_color != BLACK 
-        and is_empty_square(new_pos) 
-        and move_length(start_square_pos, end_square_pos) == 2
-        and oposite_player_on_path(start_square_pos, end_square_pos)
-    )
-
-def is_valid_move(pos, new_pos):
-    start_square_color = get_square_color_from_pos(pos)
-    start_square_pos = get_square_from_pos(pos)
-    
-    end_square_pos = get_square_from_pos(new_pos)
-
-    return (
-           is_valid_move_on_empty_square(new_pos, start_square_color, start_square_pos, end_square_pos)
-        or is_valid_jump_move(new_pos, start_square_color, start_square_pos, end_square_pos)
-    )
-
-# Init the board
-for i in range(NB_SQUARES_SIDE):
-    for j in range(NB_SQUARES_SIDE):
-        if (i + j) % 2 == 0:
-            pygame.draw.rect(screen, WHITE, (i * square_size, j * square_size, square_size, square_size))
-        else:
-            pygame.draw.rect(screen, BLACK, (i * square_size, j * square_size, square_size, square_size))
-
-# Set pieces
-for i in range(NB_SQUARES_SIDE):
-    for j in range(NB_SQUARES_SIDE):
-        if (i + j) % 2 == 0:
-            if j < 3:
-                pygame.draw.circle(screen, PLAYER_1_COLOR, (i * square_size + square_size // 2, j * square_size + square_size // 2), square_size // 2 - PIECE_TO_SQUARE_MARGIN)
-            elif j > 4:
-                pygame.draw.circle(screen, PLAYER_2_COLOR, (i * square_size + square_size // 2, j * square_size + square_size // 2), square_size // 2 - PIECE_TO_SQUARE_MARGIN)
-
-click_count = 0
+count_square_click = 0
 first_pos = None
 second_pos = None
 
-# Run the game loop
-while running:
+def move_piece(old_pos, new_pos):
+    print("Moving piece")
+
+    piece = board_back.squares[old_pos[0]][old_pos[1]].piece
+
+    board_back.move_piece(piece, old_pos, new_pos)
+    board[old_pos[0]][old_pos[1]].delete("all")
+    board[new_pos[0]][new_pos[1]].create_oval(PIECE_TO_SQUARE_MARGIN, PIECE_TO_SQUARE_MARGIN, square_size - PIECE_TO_SQUARE_MARGIN, square_size - PIECE_TO_SQUARE_MARGIN, fill=piece.color)
+
+    print("Piece moved")
+
+def on_square_click(event):
+    print("Square clicked")
+
+    widget = event.widget
+
+    print(f"Square clicked: {widget.grid_info()}")
+
+    global count_square_click, first_pos, second_pos
+    count_square_click += 1
+
+
+    if count_square_click == 1:
+        first_pos = widget.grid_info().get("row"), widget.grid_info().get("column")
+
+    if count_square_click == 2:
+        second_pos = widget.grid_info().get("row"), widget.grid_info().get("column")
+        move_piece(first_pos, second_pos)
+
+        count_square_click = 0
     
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-            running = False
-        
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            print("###########################")
-            print(f"Square pos :{get_square_from_pos(pygame.mouse.get_pos())}")
-            print(f"Absolute pos :{pygame.mouse.get_pos()}")
+    print("End square clicked")
 
-            color = get_square_color_from_pos(pygame.mouse.get_pos())
-            if color == WHITE:
-                print("White")
-            else:
-                print("Black")
+def create_board(frame, square_size):
+    print("Creating board")
 
-            player = get_player_from_pos(pygame.mouse.get_pos())
-            if player == 1:
-                print("Player 1")
-            elif player == 2:
-                print("Player 2")
-            else:
-                print("No player")
+    global board
 
-            if click_count == 0:
-                first_pos = pygame.mouse.get_pos()
-                click_count += 1
-            else:
-                second_pos = pygame.mouse.get_pos()
-                click_count += 1
+    for i in range(NB_SQUARES_SIDE):
+        for j in range(NB_SQUARES_SIDE):
+            bg = board_back.squares[i][j].color
 
-                if click_count == 2:
-                    if is_valid_move(first_pos, second_pos):
-                        move_piece(first_pos, second_pos)
-                    click_count = 0
+            square = Canvas(frame, bg=bg, width=square_size, height=square_size)
+            square.grid(row=i, column=j)
+            square.bind("<Button-1>", on_square_click)
+            board[i][j] = square
 
-            print("###########################")
+    print("Board created")
 
-    pygame.display.flip()
-    clock.tick(60)
+    return board
 
-pygame.quit()
+def set_pieces(board, square_size):
+    print("Setting pieces")
+
+    for i in range(NB_SQUARES_SIDE):
+        for j in range(NB_SQUARES_SIDE):
+            piece = board_back.squares[i][j].piece
+
+            if piece:
+                board[i][j].create_oval(PIECE_TO_SQUARE_MARGIN, PIECE_TO_SQUARE_MARGIN, square_size - PIECE_TO_SQUARE_MARGIN, square_size - PIECE_TO_SQUARE_MARGIN, fill=piece.color)
+
+    print("Pieces set")
+
+    return board
+
+def get_player(square):
+    print("Getting player")
+
+    pos = square.grid_info().get("row"), square.grid_info().get("column")
+    
+    piece = board_back.squares[pos[0]][pos[1]].piece
+
+    if piece:
+        if(piece.color == PLAYER_1_COLOR):
+            print("Player 1")
+            return 1
+        elif(piece.color == PLAYER_2_COLOR):
+            print("Player 2")
+            return 2
+    
+    print("No player")
+    return 0
+
+def init():
+    print("Initializing game")
+
+    root = Tk()
+    root.title("Checkers")
+
+    # Get the current screen size
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    screen_size = min(screen_width, screen_height)
+
+    root.geometry(f"{screen_size}x{screen_size}")
+
+    frame = Frame(root)
+
+    global square_size
+    square_size = screen_size // NB_SQUARES_SIDE - 10
+
+    board = create_board(frame, square_size)
+    set_pieces(board, square_size)
+    
+
+    frame.pack()
+
+    print("Game initialized")
+
+    return root
+
+def main():
+    print("Starting game")
+
+    root = init()
+    root.mainloop()
+
+    print("Game ended")
+
+if __name__ == "__main__":
+    main()
