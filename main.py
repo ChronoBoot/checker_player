@@ -1,4 +1,5 @@
 import pygame
+from enum import Enum
 
 NB_SQUARES_SIDE = 8
 WHITE = (255, 255, 255)
@@ -9,6 +10,10 @@ PIECE_TO_SQUARE_MARGIN = 5
 
 PLAYER_1_COLOR = RED
 PLAYER_2_COLOR = BLUE
+
+
+Direction = Enum('Direction', ['UP_LEFT', 'UP_RIGHT', 'DOWN_LEFT', 'DOWN_RIGHT'])
+
 pygame.init()
 
 # Get the current screen size
@@ -27,6 +32,12 @@ clock = pygame.time.Clock()
 running = True
 
 square_size = screen_width // NB_SQUARES_SIDE
+
+def absolute_pos_to_square_pos(pos):
+    return (int(pos[1] // square_size), int(pos[0] // square_size))
+
+def square_pos_to_absolute_pos(pos):
+    return (pos[1] * square_size, pos[0] * square_size)
 
 def get_square_from_pos(pos):
     return (int(pos[1] // square_size), int(pos[0] // square_size))
@@ -65,6 +76,71 @@ def move_piece(pos, new_pos):
     pygame.draw.rect(screen, start_square_color, (start_square_pos[1] * square_size, start_square_pos[0] * square_size, square_size, square_size))
     pygame.draw.circle(screen, player_color, (end_square_pos[1] * square_size + square_size // 2, end_square_pos[0] * square_size + square_size // 2), square_size // 2 - PIECE_TO_SQUARE_MARGIN)
 
+def pos_in_board(pos):
+    return pos[0] >= 0 and pos[0] < NB_SQUARES_SIDE and pos[1] >= 0 and pos[1] < NB_SQUARES_SIDE
+
+def is_diagonal_move(start_square_pos, end_square_pos):
+    return abs(end_square_pos[0] - start_square_pos[0]) == abs(end_square_pos[1] - start_square_pos[1])
+
+def is_empty_square(pos):
+    return get_player_from_pos(pos) == 0
+
+def move_length(start_square_pos, end_square_pos):
+    return abs(end_square_pos[0] - start_square_pos[0])
+
+def is_valid_move_on_empty_square(new_pos, start_square_color, start_square_pos, end_square_pos):
+    return (
+            pos_in_board(end_square_pos) 
+        and is_diagonal_move(start_square_pos, end_square_pos) 
+        and start_square_color != BLACK 
+        and is_empty_square(new_pos) 
+        and move_length(start_square_pos, end_square_pos) == 1
+    )
+
+def get_move_direction(start_square_pos, end_square_pos):
+    if end_square_pos[0] < start_square_pos[0] and end_square_pos[1] < start_square_pos[1]:
+        return Direction.UP_LEFT
+    elif end_square_pos[0] < start_square_pos[0] and end_square_pos[1] > start_square_pos[1]:
+        return Direction.UP_RIGHT
+    elif end_square_pos[0] > start_square_pos[0] and end_square_pos[1] < start_square_pos[1]:
+        return Direction.DOWN_LEFT
+    elif end_square_pos[0] > start_square_pos[0] and end_square_pos[1] > start_square_pos[1]:
+        return Direction.DOWN_RIGHT
+
+def oposite_player_on_path(start_square_pos, end_square_pos):
+    absolute_start_pos = square_pos_to_absolute_pos(start_square_pos)
+    move_direction = get_move_direction(start_square_pos, end_square_pos)
+
+    if move_direction == Direction.UP_LEFT:
+        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] - square_size, absolute_start_pos[1] - square_size))
+    elif move_direction == Direction.UP_RIGHT:
+        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] - square_size, absolute_start_pos[1] + square_size))
+    elif move_direction == Direction.DOWN_LEFT:
+        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] + square_size, absolute_start_pos[1] - square_size))
+    elif move_direction == Direction.DOWN_RIGHT:
+        return get_player_from_pos(absolute_start_pos) != get_player_from_pos((absolute_start_pos[0] + square_size, absolute_start_pos[1] + square_size))
+    
+def is_valid_jump_move(new_pos, start_square_color, start_square_pos, end_square_pos):
+    return (
+            pos_in_board(end_square_pos) 
+        and is_diagonal_move(start_square_pos, end_square_pos) 
+        and start_square_color != BLACK 
+        and is_empty_square(new_pos) 
+        and move_length(start_square_pos, end_square_pos) == 2
+        and oposite_player_on_path(start_square_pos, end_square_pos)
+    )
+
+def is_valid_move(pos, new_pos):
+    start_square_color = get_square_color_from_pos(pos)
+    start_square_pos = get_square_from_pos(pos)
+    
+    end_square_pos = get_square_from_pos(new_pos)
+
+    return (
+           is_valid_move_on_empty_square(new_pos, start_square_color, start_square_pos, end_square_pos)
+        or is_valid_jump_move(new_pos, start_square_color, start_square_pos, end_square_pos)
+    )
+
 # Init the board
 for i in range(NB_SQUARES_SIDE):
     for j in range(NB_SQUARES_SIDE):
@@ -94,7 +170,9 @@ while running:
             running = False
         
         if event.type == pygame.MOUSEBUTTONDOWN:
-            print(get_square_from_pos(pygame.mouse.get_pos()))
+            print("###########################")
+            print(f"Square pos :{get_square_from_pos(pygame.mouse.get_pos())}")
+            print(f"Absolute pos :{pygame.mouse.get_pos()}")
 
             color = get_square_color_from_pos(pygame.mouse.get_pos())
             if color == WHITE:
@@ -118,8 +196,11 @@ while running:
                 click_count += 1
 
                 if click_count == 2:
-                    move_piece(first_pos, second_pos)
+                    if is_valid_move(first_pos, second_pos):
+                        move_piece(first_pos, second_pos)
                     click_count = 0
+
+            print("###########################")
 
     pygame.display.flip()
     clock.tick(60)
