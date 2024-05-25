@@ -1,10 +1,10 @@
-class Piece():
-    def __init__(self, color, position):
+class Piece:
+    def __init__(self, color):
         self.color = color
-        self.position = position
+        self.king = False
 
-    def move(self, new_position):
-        self.position = new_position
+    def make_king(self):
+        self.king = True
 
     def __str__(self):
-        return f'{self.color} piece at {self.position}'
+        return self.color.upper() if self.king else self.color
