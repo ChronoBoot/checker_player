@@ -10,7 +10,7 @@ These instructions will guide you through setting up the project on your local m
 
 Before you begin, ensure you have the following installed:
 
-- Python 3.8 or higher
+- Python 3.12 or higher
 
 #### Installing Python
 
@@ -23,7 +23,7 @@ Follow these steps to get your development environment up and running:
 1. **Clone the repository:**
    
    ```
-   git clone https://github.com/yourusername/checkers-ai.git
+   git clone https://github.com/chronoboot/checkers-ai.git
    ```
 
 2. **Navigate to the project directory:**
@@ -38,37 +38,34 @@ Follow these steps to get your development environment up and running:
    python -m venv venv
    ```
 
-4. **Activate the virtual environment:**
+4. **Manage and run with Poetry:**
    
-   - On Windows:
-     
-     ```
-     .\venv\Scripts\activate
-     ```
-   
-   - On MacOS/Linux:
-     
-     ```
-     source venv/bin/activate
-     ```
+    - Install Poetry:
+      
+      ```
+      pip install poetry
+      ```
+      
+    - Initialize Poetry:
+      
+      ```
+      poetry init
+      ```
 
 5. **Install the required packages:**
    
    ```
-   pip install -r requirements.txt
+   poetry install
    ```
-
-   Note: To exit the virtual environment, simply type `deactivate` in the command line.
 
 ## Usage
 
 To run the project:
 
-1. Ensure the virtual environment is activated.
-2. Execute the main script in the root folder:
+2. Execute the main script in the main package (checker player):
    
    ```
-   python main.py
+   poetry run python main.py
    ```
 
 This will start the game, allowing a human player to compete against the AI or observe the AI play against itself.

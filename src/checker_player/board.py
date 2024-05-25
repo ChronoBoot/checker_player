@@ -2,7 +2,7 @@ from piece import Piece
 from square import Square
 
 
-class Board():
+class Board:
 
     def set_board(self, size):
         self.squares = [[Square(i, j, "white" if (i + j) % 2 == 0 else "black", None) for j in range(size)] for i in range(size)]
